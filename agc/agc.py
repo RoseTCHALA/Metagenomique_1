@@ -88,14 +88,13 @@ def read_fasta(amplicon_file: Path, minseqlen: int) -> Iterator[str]:
         sequence = ""
         for line in monfich:
             line = line.strip()
-            if line.startswith(">"):  # Sequence header
-                if len(sequence) >= minseqlen:  # Yield the sequence if it's long enough
+            if line.startswith(">"):
+                if len(sequence) >= minseqlen:
                     yield sequence
-                sequence = ""  # Reset sequence for the next entry
+                sequence = ""
             else:
-                sequence += line  # Append the sequence line
+                sequence += line
 
-        # After the loop, yield the last sequence if it meets the minimum length
         if len(sequence) >= minseqlen:
             yield sequence
 
@@ -103,6 +102,7 @@ def read_fasta(amplicon_file: Path, minseqlen: int) -> Iterator[str]:
 def dereplication_fulllength(amplicon_file: Path, minseqlen: int, mincount: int) -> Iterator[List]:
     stock = {}
     sequences = read_fasta(amplicon_file,minseqlen)
+
 
     for sequence in sequences :
         if sequence not in stock.keys() :
