@@ -100,9 +100,13 @@ def read_fasta(amplicon_file: Path, minseqlen: int) -> Iterator[str]:
 
 
 def dereplication_fulllength(amplicon_file: Path, minseqlen: int, mincount: int) -> Iterator[List]:
+    
+    print(f"Bienvenue sur le générateur OTU.")
     stock = {}
     sequences = read_fasta(amplicon_file,minseqlen)
+    print(f"Succes de la lecture de: {amplicon_file} ")
 
+    print(f"Récupération des séquences ayant une occurence > {mincount}...")
 
     for sequence in sequences :
         if sequence not in stock.keys() :
@@ -113,10 +117,16 @@ def dereplication_fulllength(amplicon_file: Path, minseqlen: int, mincount: int)
 
     sorted_stock = sorted(stock.items(), key=lambda x:x[1], reverse=True)
     converted_dict = dict(sorted_stock)
+    count = 0
 
     for key in converted_dict:
         if converted_dict[key] >= mincount :
             yield [key, stock[key]]
+            count += 1
+
+    print(f"{count} séquences ont une occurence > {mincount}.")
+
+    
 
 
 
@@ -150,7 +160,10 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
     #La première séquence est potentiellement une OTU
     OTU = [occurences[0]]
 
+
+    print(f"Démarrage de la boucle de calcul des OTU. Cette étape peut prendre quelque minutes")
     for i in range(1, total):
+        is_OTU = True
         seq = occurences[i]
 
         sequence_test = seq[0]
@@ -158,30 +171,36 @@ def abundance_greedy_clustering(amplicon_file: Path, minseqlen: int, mincount: i
 
 
         #On regarde si la séquence en question match ou match pas avec une OTU déja présente
-        for j in range(0, len(OTU)):
-            seq_OTU = OTU[j]
-            if abondance_test >= seq_OTU[1] :
-                a = nw.global_align(sequence_test, seq_OTU[0], gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
-                if get_identity(a) >= 97 :
-                    OTU.remove(seq_OTU)
-                    OTU.append(seq)
-        #Si c'est pas le cas, on la teste avec toutes les autres séquences
-        is_OTU = True
+        for seq_OTU in OTU:
+            seq_otu_test = seq_OTU[0]
+            abondance_otu = seq_OTU[1]
 
-        for k in range(i + 1 , total):
-            seq1 = occurences[k]
-            sequence_test1 = seq1[0]
-            abondance_test1 = seq1[1]
-
-            if abondance_test1 > abondance_test:
-                a = nw.global_align(seqsequence_testuence1, seq_OTU[0], gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
-                
-                if get_identity(a) >= 97 :
+            if abondance_otu >= abondance_test:
+                a = nw.global_align(sequence_test, seq_otu_test, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
+                if get_identity(a) >= 97:
                     is_OTU = False
+                    break
+
+
+        #Si la séquence n'a pas matché avec celles présentes dans la liste d'OTU : 
+        if is_OTU == True :
+            for k in range(i + 1 , total):
+                seq1 = occurences[k]
+                sequence_test1 = seq1[0]
+                abondance_test1 = seq1[1]
+
+                if abondance_test1 > abondance_test:
+                    a = nw.global_align(sequence_test, sequence_test1, gap_open=-1, gap_extend=-1, matrix=str(Path(__file__).parent / "MATCH"))
+                    if get_identity(a) >= 97 :
+                        is_OTU = False
+                        break
 
         if is_OTU == True :
-            OTU.append(occurences[i])
+            OTU.append(seq)
+
+    print(f"Nous avons trouvé {len(OTU)} séquences OTU.")
     return OTU
+
 
 
         
@@ -197,6 +216,7 @@ def write_OTU(OTU_list: List, output_file: Path) -> None:
             seq = OTU_list[i]
             file.write( f">OTU_{i+1} occurence:{seq[1]}\n")
             file.write( f"{textwrap.fill(seq[0], width = 80 )}\n")
+        print(f"Le fichier {output_file} à été crée.")
 
 
 
