@@ -24,15 +24,15 @@ from collections import Counter
 from typing import Iterator, Dict, List
 # https://github.com/briney/nwalign3
 # ftp://ftp.ncbi.nih.gov/blast/matrices/
-import nwalign3 as nw
+#import nwalign3 as nw
 
-__author__ = "Your Name"
+__author__ = "Rose TCHALA SARE"
 __copyright__ = "Universite Paris Diderot"
-__credits__ = ["Your Name"]
+__credits__ = ["Rose TCHALA SARE"]
 __license__ = "GPL"
 __version__ = "1.0.0"
-__maintainer__ = "Your Name"
-__email__ = "your@email.fr"
+__maintainer__ = "Rose TCHALA SARE"
+__email__ = "r.tchalasare@etu.u-paris.fr"
 __status__ = "Developpement"
 
 
@@ -77,26 +77,44 @@ def get_arguments(): # pragma: no cover
 
 
 def read_fasta(amplicon_file: Path, minseqlen: int) -> Iterator[str]:
-    """Read a compressed fasta and extract all fasta sequences.
+    with gzip.open(amplicon_file, "rt") as monfich:
+        sequence = ""
+        for line in monfich:
+            line = line.strip()
+            if line.startswith(">"):
+                if len(sequence) >= minseqlen:
+                    yield sequence
+                sequence = ""
+            else:
+                sequence += line
 
-    :param amplicon_file: (Path) Path to the amplicon file in FASTA.gz format.
-    :param minseqlen: (int) Minimum amplicon sequence length
-    :return: A generator object that provides the Fasta sequences (str).
-    """
-    pass
+        if len(sequence) >= minseqlen:
+            yield sequence
 
 
 def dereplication_fulllength(amplicon_file: Path, minseqlen: int, mincount: int) -> Iterator[List]:
-    """Dereplicate the set of sequence
+    stock = {}
+    sequences = read_fasta(amplicon_file,minseqlen)
 
-    :param amplicon_file: (Path) Path to the amplicon file in FASTA.gz format.
-    :param minseqlen: (int) Minimum amplicon sequence length
-    :param mincount: (int) Minimum amplicon count
-    :return: A generator object that provides a (list)[sequences, count] of sequence with a count >= mincount and a length >= minseqlen.
-    """
-    pass
+    for sequence in sequences :
+        if sequence not in stock.keys() :
+            stock[sequence] = 1
+        else :
+            stock[sequence] += 1
+
+
+    sorted_stock = sorted(stock.items(), key=lambda x:x[1], reverse=True)
+    converted_dict = dict(sorted_stock)
+
+    for key in converted_dict:
+        if converted_dict[key] >= mincount :
+            yield [key, stock[key]]
+
+
+
 
 def get_identity(alignment_list: List[str]) -> float:
+    
     """Compute the identity rate between two sequences
 
     :param alignment_list:  (list) A list of aligned sequences in the format ["SE-QUENCE1", "SE-QUENCE2"]
@@ -137,6 +155,12 @@ def main(): # pragma: no cover
     # Get arguments
     args = get_arguments()
     # Votre programme ici
+
+
+    fasta = args.amplicon_file    # Access the input file path
+    minseqlen = args.minseqlen
+
+    read_fasta(fasta,minseqlen)
 
 
 
